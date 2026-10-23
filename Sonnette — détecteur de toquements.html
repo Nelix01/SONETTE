@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonnette — détecteur de toquements</title>
+<style>
+:root {
+  --site-primary: #285D57;
+  --site-secondary: #DDECE5;
+  --site-background: #F5F8F5;
+  --site-on-primary: #FFFFFF;
+  --site-on-secondary: #193F39;
+  --site-on-background: #172B27;
+  --site-font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: light-dark(#F5F8F5,#101916); color: light-dark(#172B27,#ECF4EF); }
+#app { min-height: 100vh; background-color: var(--site-background); color: var(--site-on-background); border-radius: 0; padding: calc(28px * var(--site-spacing-scale)) 18px 36px; }
+main { max-width: 720px; margin: 0 auto; }
+header { display:flex; align-items:center; gap:12px; margin-bottom:30px; }
+.logo { width:48px;height:48px; border-radius:16px; background:var(--site-primary); color:var(--site-on-primary); display:grid;place-items:center;font-size:24px; }
+.eyebrow { text-transform:uppercase; letter-spacing:.13em; font-size:11px; font-weight:800; opacity:.7; }
+h1 { font-family:var(--site-font-heading); font-size:calc(30px * var(--site-heading-scale)); line-height:1.1; margin:4px 0 0; letter-spacing:-.04em; }
+.intro { color:light-dark(#52645D,#C4D1C9); font-size:15px; line-height:1.6; margin:0 0 22px; }
+.panel { background:light-dark(#FFFFFF,#1B2722); border:1px solid light-dark(#DCE6DF,#34453C); border-radius:calc(24px * var(--site-radius-scale)); padding:calc(22px * var(--site-spacing-scale)); box-shadow:0 10px 30px #18392a0b; }
+.status { display:flex; align-items:center; gap:10px; font-weight:750; font-size:14px; }
+.dot { width:10px;height:10px;border-radius:50%;background:#9AA9A1; }
+.dot.active { background:#2C9C68; box-shadow:0 0 0 5px #2c9c681c; }
+.visual { margin:24px auto 16px; width:150px;height:150px;border-radius:50%;background:var(--site-secondary);display:grid;place-items:center;position:relative;color:var(--site-on-secondary); }
+.visual svg { width:65px;height:65px; }
+.visual.listening::after { content:""; position:absolute; inset:-9px; border:2px solid #78B49B; border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%{transform:scale(.95);opacity:.8} 100%{transform:scale(1.15);opacity:0} }
+.bigstatus { text-align:center; font-size:20px; font-weight:800; margin:0 0 6px; }
+.substatus { text-align:center; font-size:13px; color:light-dark(#64766D,#B8C8BE); line-height:1.5; max-width:440px; margin:0 auto 22px; }
+button { font:inherit; cursor:pointer; border:0; border-radius:14px; min-height:52px; padding:13px 18px; font-weight:800; transition:transform .12s,opacity .12s; }
+button:active { transform:scale(.985); }
+button:focus-visible,input:focus-visible { outline:3px solid #6C9F8D;outline-offset:3px; }
+.primary { width:100%; background:var(--site-primary); color:var(--site-on-primary); }
+.secondary { background:var(--site-secondary); color:var(--site-on-secondary); }
+.alert { display:none; margin-top:16px; border-radius:16px; padding:16px; background:#FFF0C9; color:#573D00; text-align:center; }
+.alert.show { display:block; animation:pop .25s ease-out; }
+@keyframes pop { from{transform:scale(.97);opacity:.5} to{transform:scale(1);opacity:1} }
+.alert strong { display:block; font-size:20px; margin:3px 0 10px; }
+.alert button { min-height:42px; }
+.settings { margin-top:18px; }
+.settings h2 { font-size:17px; margin:0 0 16px; }
+.setting { margin:17px 0 0; }
+.setting label { display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:14px;margin-bottom:9px; }
+.setting small { color:light-dark(#64766D,#B8C8BE); font-weight:500; }
+input[type=range] { width:100%; accent-color:var(--site-primary); }
+.toggleline { display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:15px;margin-top:15px;border-top:1px solid light-dark(#E1E9E3,#34453C); }
+.toggleline label { font-weight:700;font-size:14px; }
+input[type=checkbox] { width:22px;height:22px;accent-color:var(--site-primary); }
+.note { font-size:12px; line-height:1.55; color:light-dark(#66786F,#B9C9BF); margin:16px 2px 0; }
+footer { text-align:center; font-size:12px; color:light-dark(#75847C,#A8B8AE); margin-top:22px; }
+@media(min-width:600px){#app{padding-top:42px}.panel{padding:28px}.intro{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body><div id="app"><main>
+<header><div class="logo" aria-hidden="true">♬</div><div><div class="eyebrow">Aide au quotidien</div><h1>Sonnette</h1></div></header>
+<p class="intro">Un petit assistant qui écoute les bruits de coups à la porte et fait sonner une alerte pour t’aider à les remarquer.</p>
+<section class="panel" aria-label="Détecteur de toquements">
+  <div class="status"><span id="dot" class="dot"></span><span id="statusText" aria-live="polite">Détection désactivée</span></div>
+  <div id="visual" class="visual" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 28V20a18 18 0 0 1 36 0v8c0 7 4 11 7 14H7c3-3 7-7 7-14Z"/><path d="M25 49a7 7 0 0 0 14 0"/><path d="M5 8l7 5M59 8l-7 5"/></svg></div>
+  <p class="bigstatus" id="mainStatus">Prêt à écouter</p><p class="substatus" id="subStatus">Appuie sur le bouton pour autoriser le microphone et démarrer la détection.</p>
+  <button class="primary" id="toggleBtn">Activer le détecteur</button>
+  <div class="alert" id="alertBox" role="alert"><div aria-hidden="true" style="font-size:28px">🔔</div><strong>Quelqu’un a peut-être frappé !</strong><button class="secondary" id="stopAlarm">Arrêter la sonnette</button></div>
+</section>
+<section class="panel settings" aria-label="Réglages"><h2>Réglages</h2>
+  <div class="setting"><label for="sensitivity"><span>Sensibilité</span><span id="sensLabel">Moyenne</span></label><input id="sensitivity" type="range" min="1" max="10" value="5"><small>Augmente-la si les coups ne sont pas détectés. Baisse-la si trop de bruits déclenchent l’alerte.</small></div>
+  <div class="setting"><label for="volume"><span>Volume de la sonnette</span><span id="volLabel">Fort · 80 %</span></label><input id="volume" type="range" min="10" max="100" value="80"></div>
+  <div class="toggleline"><label for="repeat">Répéter la sonnette jusqu’à l’arrêt</label><input id="repeat" type="checkbox" checked></div>
+  <p class="note">Conseil : pose le téléphone près de la porte et garde cette page ouverte. Cette démo analyse les variations de volume du micro : elle peut confondre des coups avec d’autres bruits. Le microphone ne fonctionne que si tu autorises l’accès.</p>
+  <div style="margin-top:16px;padding:15px;border-radius:14px;background:var(--site-secondary);color:var(--site-on-secondary)"><strong style="display:block;margin-bottom:6px">Le micro est refusé ?</strong><p style="margin:0;font-size:14px;line-height:1.55">L’aperçu intégré à ChatGPT peut bloquer l’accès au microphone. Réessaie dans un navigateur si l’application est disponible dans une page web indépendante. Autoriser le micro dans Windows ne suffit pas toujours pour cet aperçu.</p></div>
+</section>
+<section class="panel settings" aria-label="Reconnaissance des personnes"><h2>Reconnaître qui frappe</h2>
+  <p class="note" style="margin:0 0 14px">Entraîne la détection en enregistrant plusieurs exemples de toquements pour chaque personne. Cette version compare des caractéristiques sonores simples : elle peut se tromper et ne reconnaît pas réellement une personne comme le ferait un système biométrique.</p>
+  <div class="setting"><label for="personName"><span>Nom de la personne</span></label><input id="personName" type="text" placeholder="Ex. : mon frère" autocomplete="off" style="width:100%;padding:12px;border:1px solid #9aada3;border-radius:10px;font:inherit;background:light-dark(#fff,#1b2722);color:var(--site-on-background)"></div>
+  <button class="secondary" id="recordPerson" style="width:100%;margin-top:12px">Enregistrer 5 secondes de toquements</button>
+  <p id="trainingStatus" class="note" aria-live="polite">Active d’abord le détecteur, puis demande à cette personne de frapper plusieurs fois pendant l’enregistrement.</p>
+  <div id="peopleList" style="display:grid;gap:8px;margin-top:12px"></div>
+  <div id="identifiedPerson" role="status" style="display:none;margin-top:14px;padding:14px;border-radius:12px;background:var(--site-secondary);color:var(--site-on-secondary)"></div>
+</section>
+<footer>Démo de détection sonore · Le micro est utilisé uniquement pendant l’écoute.</footer>
+</main></div>
+<script>
+(() => {
+ const $ = id => document.getElementById(id);
+ const btn=$('toggleBtn'), dot=$('dot'), statusText=$('statusText'), mainStatus=$('mainStatus'), subStatus=$('subStatus'), visual=$('visual'), alertBox=$('alertBox');
+ const sensitivity=$('sensitivity'), volume=$('volume');
+ let stream=null, ctx=null, analyser=null, source=null, raf=0, active=false, alarmOsc=null, alarmGain=null, lastHit=0, hitTimes=[], alarmTimer=0, baseline=0, lastRms=0, trainingUntil=0, trainingName='', trainingSamples=[], people=[];
+ const threshold=()=> 0.045 - (Number(sensitivity.value)-1)*0.0035;
+ function updateSensitivity(){ const n=+sensitivity.value; $('sensLabel').textContent=n<4?'Faible':n<8?'Moyenne':'Élevée'; }
+ function updateVolume(){ $('volLabel').textContent=(+volume.value>=75?'Fort':+volume.value>=40?'Moyen':'Doux')+' · '+volume.value+' %'; if(alarmGain) alarmGain.gain.value=+volume.value/100*.22; }
+ sensitivity.addEventListener('input',updateSensitivity); volume.addEventListener('input',updateVolume); updateSensitivity();updateVolume();
+ function startChime(){
+   if(!ctx) return;
+   stopChime();
+   alertBox.classList.add('show');
+   const play=()=>{
+     if(!active || !$('repeat').checked && alarmOsc) return;
+     const now=ctx.currentTime;
+     [880,1174.66,1567.98].forEach((freq,i)=>{
+       const osc=ctx.createOscillator(), gain=ctx.createGain();
+       osc.type='sine'; osc.frequency.value=freq;
+       gain.gain.setValueAtTime(0.0001,now+i*.13);
+       gain.gain.exponentialRampToValueAtTime(Math.max(.005,(+volume.value/100)*.16),now+i*.13+.025);
+       gain.gain.exponentialRampToValueAtTime(.0001,now+i*.13+.34);
+       osc.connect(gain);gain.connect(ctx.destination);osc.start(now+i*.13);osc.stop(now+i*.13+.36);
+     });
+   };
+   play();
+   if($('repeat').checked) alarmTimer=setInterval(()=>{if(active)play();},1250);
+ }
+ function stopChime(){ if(alarmTimer){clearInterval(alarmTimer);alarmTimer=0;} alertBox.classList.remove('show'); }
+ $('stopAlarm').addEventListener('click',()=>{stopChime();});
+ function detect(){
+   if(!active || !analyser) return;
+   const data=new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(data);
+   let sum=0; for(let i=0;i<data.length;i++){const v=(data[i]-128)/128;sum+=v*v;}
+   const rms=Math.sqrt(sum/data.length); const now=performance.now();
+   // Look for a short, sharp increase in sound level rather than constant background noise.
+   baseline=baseline===0?rms:baseline*.965+rms*.035;
+   const rise=rms-Math.max(baseline*.9,lastRms*.72);
+   if(trainingUntil>now){trainingSamples.push({rms, rise, crest:Math.max(0,rms-lastRms)});}
+   if(rms>threshold() && rise>threshold()*.24 && now-lastHit>260){
+     lastHit=now; hitTimes=hitTimes.filter(t=>now-t<1700); hitTimes.push(now);
+     // A pair or cluster of impacts is more likely to be a knock than one isolated sound.
+     if(hitTimes.length>=2){ mainStatus.textContent='Toquements détectés';substatusForKnock();startChime();hitTimes=[]; }
+   }
+   lastRms=rms;
+   raf=requestAnimationFrame(detect);
+ }
+ function substatusForKnock(){
+   const sample=trainingSamples.slice(-180);
+   if(people.length && sample.length){
+     const avg=sample.reduce((s,x)=>s+x.rms,0)/sample.length;
+     const avgRise=sample.reduce((s,x)=>s+x.rise,0)/sample.length;
+     let best=null,score=Infinity;
+     for(const p of people){const d=Math.abs(avg-p.avgRms)/(p.avgRms+.01)+Math.abs(avgRise-p.avgRise)/(p.avgRise+.01);if(d<score){score=d;best=p;}}
+     const out=$('identifiedPerson');out.style.display='block';
+     if(best && score<2.2){out.textContent='Ressemblance possible avec : '+best.name+' (estimation incertaine)';subStatus.textContent='Toquements détectés — ressemblance possible avec '+best.name+'.';}
+     else {out.textContent='Personne non reconnue avec confiance';subStatus.textContent='Toquements détectés, mais impossible d’identifier qui frappe.';}
+   } else {subStatus.textContent='Un bruit ressemble à des coups à la porte.';}
+ }
+ function renderPeople(){const list=$('peopleList');list.replaceChildren();people.forEach((p,i)=>{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid light-dark(#DCE6DF,#34453C);border-radius:12px';const label=document.createElement('span');label.textContent=p.name+' · exemples enregistrés';const del=document.createElement('button');del.className='secondary';del.style.cssText='min-height:36px;padding:7px 10px';del.textContent='Supprimer';del.addEventListener('click',()=>{people.splice(i,1);renderPeople();});row.append(label,del);list.append(row);});}
+ $('recordPerson').addEventListener('click',()=>{
+   const name=$('personName').value.trim();
+   if(!active || !analyser){$('trainingStatus').textContent='Active d’abord le détecteur et autorise le microphone.';return;}
+   if(!name){$('trainingStatus').textContent='Entre un nom, par exemple « mon frère », avant l’enregistrement.';return;}
+   trainingName=name;trainingSamples=[];trainingUntil=performance.now()+5000;$('trainingStatus').textContent='Enregistrement en cours pendant 5 secondes : fais frapper cette personne maintenant.';
+   setTimeout(()=>{if(trainingName!==name)return;trainingUntil=0;const s=trainingSamples.filter(x=>x.rms>0.003);if(s.length<8){$('trainingStatus').textContent='Pas assez de son détecté. Réessaie avec des toquements plus nets.';return;}const avgRms=s.reduce((a,x)=>a+x.rms,0)/s.length;const avgRise=s.reduce((a,x)=>a+x.rise,0)/s.length;const existing=people.find(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase());if(existing){existing.avgRms=avgRms;existing.avgRise=avgRise;}else people.push({name,avgRms,avgRise});renderPeople();$('trainingStatus').textContent='Exemple enregistré pour '+name+'. Ajoute plusieurs sessions pour tester, mais cette méthode reste approximative.';},5000);
+ });
+ async function start(){
+   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){subStatus.textContent='Le navigateur ne permet pas l’accès au micro ici. Essaie sur un navigateur récent et une connexion sécurisée.';return;}
+   try{
+     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false},video:false});
+     ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume();
+     analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.12;
+     source=ctx.createMediaStreamSource(stream);source.connect(analyser);
+     active=true;dot.classList.add('active');statusText.textContent='Microphone actif';mainStatus.textContent='J’écoute les bruits';subStatus.textContent='Laisse cette page ouverte. Les coups répétés peuvent déclencher la sonnette.';visual.classList.add('listening');btn.textContent='Désactiver le détecteur';btn.setAttribute('aria-pressed','true');
+     detect();
+   }catch(e){subStatus.textContent=e.name==='NotAllowedError'?'Accès au microphone refusé. Autorise le micro dans les réglages du navigateur puis réessaie.':'Impossible d’activer le microphone. Vérifie qu’il est disponible et réessaie.';}
+ }
+ function stop(){active=false;cancelAnimationFrame(raf);stopChime();if(stream)stream.getTracks().forEach(t=>t.stop());if(ctx)ctx.close().catch(()=>{});stream=null;ctx=null;analyser=null;source=null;dot.classList.remove('active');statusText.textContent='Détection désactivée';mainStatus.textContent='Prêt à écouter';subStatus.textContent='Appuie sur le bouton pour autoriser le microphone et démarrer la détection.';visual.classList.remove('listening');btn.textContent='Activer le détecteur';btn.setAttribute('aria-pressed','false');hitTimes=[];baseline=0;lastRms=0;}
+ btn.addEventListener('click',()=>active?stop():start());
+ window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(ctx)ctx.close().catch(()=>{});});
+})();
+</script></body></html>
